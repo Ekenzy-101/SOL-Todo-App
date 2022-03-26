@@ -1,3 +1,4 @@
+use account_data::*;
 use anchor_lang::prelude::*;
 use instructions::*;
 
@@ -22,5 +23,9 @@ pub mod todo_app {
 
     pub fn delete_todo(ctx: Context<DeleteTodo>, id: Pubkey) -> Result<()> {
         instructions::delete_todo(ctx, id)
+    }
+
+    pub fn update_todo(ctx: Context<UpdateTodo>, todo: Todo) -> Result<()> {
+        instructions::update_todo(ctx, todo)
     }
 }

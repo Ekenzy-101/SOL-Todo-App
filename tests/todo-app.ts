@@ -23,13 +23,14 @@ interface Todo {
 describe("Todo App", () => {
   setProvider(Provider.env());
 
-  const program = workspace.TodoApp as Program<TodoApp>;
-  const user = program.provider.wallet;
   const MAX_TODO_CONTENT_LENGTH = 200;
   const MAX_TODO_LIST_LENGTH = 8;
+  const program = workspace.TodoApp as Program<TodoApp>;
+  const user = program.provider.wallet;
 
-  let todoListKeypair: web3.Keypair;
+  let content: string;
   let id: web3.PublicKey;
+  let todoListKeypair: web3.Keypair;
 
   const initialize = () => {
     return program.rpc.initialize({
@@ -60,6 +61,22 @@ describe("Todo App", () => {
     });
   };
 
+  const updateTodo = () => {
+    return program.rpc.updateTodo(
+      {
+        id,
+        content,
+        completed: true,
+      },
+      {
+        accounts: {
+          todoList: todoListKeypair.publicKey,
+          user: user.publicKey,
+        },
+      }
+    );
+  };
+
   const getAccountData = async () => {
     return program.account.todoListAccountData.fetch(
       todoListKeypair.publicKey
@@ -72,6 +89,7 @@ describe("Todo App", () => {
 
   beforeEach(async () => {
     todoListKeypair = web3.Keypair.generate();
+    content = getContent(2);
     await initialize();
   });
 
@@ -101,9 +119,8 @@ describe("Todo App", () => {
   it(`should not create todo if content length is greater than ${MAX_TODO_CONTENT_LENGTH}`, async () => {
     try {
       await createTodo(getContent(1, MAX_TODO_CONTENT_LENGTH + 1));
-    } catch (error) {
-      expect(error.code).to.equal(6000);
-      expect(error.msg).to.include("content");
+    } catch ({ code, msg }) {
+      expect(program.idl.errors[0]).to.include({ code, msg });
     }
   });
 
@@ -112,9 +129,8 @@ describe("Todo App", () => {
       for (let i = 1; i <= MAX_TODO_LIST_LENGTH + 1; i++) {
         await createTodo(getContent(i));
       }
-    } catch (error) {
-      expect(error.code).to.equal(6001);
-      expect(error.msg).to.include("todolist");
+    } catch ({ code, msg }) {
+      expect(program.idl.errors[1]).to.include({ code, msg });
     }
   });
 
@@ -134,9 +150,40 @@ describe("Todo App", () => {
     try {
       id = web3.Keypair.generate().publicKey;
       await deleteTodo();
-    } catch (error) {
-      expect(error.code).to.equal(6002);
-      expect(error.msg).to.include("not found");
+    } catch ({ code, msg }) {
+      expect(program.idl.errors[2]).to.include({ code, msg });
+    }
+  });
+
+  it(`should update todo successfully`, async () => {
+    await createTodo("Hello world");
+    let data = await getAccountData();
+    id = data.todos[0].id;
+
+    await updateTodo();
+    data = await getAccountData();
+    const firstTodo = data.todos[0];
+
+    expect(firstTodo.id).to.eql(id);
+    expect(firstTodo.content).to.equal(content);
+    expect(firstTodo.completed).to.be.true;
+  });
+
+  it(`should not update todo with the given id if not found`, async () => {
+    try {
+      id = web3.Keypair.generate().publicKey;
+      await updateTodo();
+    } catch ({ code, msg }) {
+      expect(program.idl.errors[2]).to.include({ code, msg });
+    }
+  });
+
+  it(`should not update todo if content length is greater than ${MAX_TODO_CONTENT_LENGTH}`, async () => {
+    try {
+      content = getContent(1, MAX_TODO_CONTENT_LENGTH + 1);
+      await updateTodo();
+    } catch ({ code, msg }) {
+      expect(program.idl.errors[0]).to.include({ code, msg });
     }
   });
 });
