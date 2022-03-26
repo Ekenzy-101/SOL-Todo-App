@@ -19,4 +19,8 @@ pub mod todo_app {
     pub fn create_todo(ctx: Context<CreateTodo>, content: String) -> Result<()> {
         instructions::create_todo(ctx, content)
     }
+
+    pub fn delete_todo(ctx: Context<DeleteTodo>, id: Pubkey) -> Result<()> {
+        instructions::delete_todo(ctx, id)
+    }
 }

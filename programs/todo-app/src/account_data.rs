@@ -1,4 +1,5 @@
 use crate::constant::*;
+use crate::errors::*;
 use anchor_lang::prelude::*;
 
 #[account]
@@ -15,6 +16,16 @@ impl TodoListAccountData {
   pub const MAX_SIZE: usize = TodoListAccountData::COUNT_SIZE
     + TodoListAccountData::DELETED_INDEXES
     + TodoListAccountData::TODOS_SIZE;
+
+  pub fn get_todo_index(&self, id: Pubkey) -> Result<usize> {
+    for (index, todo) in self.todos.iter().enumerate() {
+      if todo.id == id {
+        return Ok(index);
+      }
+    }
+
+    err!(TodoError::TodoNotFound)
+  }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]

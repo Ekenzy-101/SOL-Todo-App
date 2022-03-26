@@ -29,6 +29,7 @@ describe("Todo App", () => {
   const MAX_TODO_LIST_LENGTH = 8;
 
   let todoListKeypair: web3.Keypair;
+  let id: web3.PublicKey;
 
   const initialize = () => {
     return program.rpc.initialize({
@@ -43,6 +44,15 @@ describe("Todo App", () => {
 
   const createTodo = (content: string) => {
     return program.rpc.createTodo(content, {
+      accounts: {
+        todoList: todoListKeypair.publicKey,
+        user: user.publicKey,
+      },
+    });
+  };
+
+  const deleteTodo = () => {
+    return program.rpc.deleteTodo(id, {
       accounts: {
         todoList: todoListKeypair.publicKey,
         user: user.publicKey,
@@ -105,6 +115,28 @@ describe("Todo App", () => {
     } catch (error) {
       expect(error.code).to.equal(6001);
       expect(error.msg).to.include("todolist");
+    }
+  });
+
+  it(`should delete todo successfully`, async () => {
+    await createTodo(getContent(1));
+    let data = await getAccountData();
+    id = data.todos[0].id;
+
+    await deleteTodo();
+    data = await getAccountData();
+    expect(data.count).to.equal(0);
+    expect(data.todos).to.have.lengthOf(0);
+    expect(data.deletedIndexes).to.have.lengthOf(1);
+  });
+
+  it(`should not delete todo with the given id if not found`, async () => {
+    try {
+      id = web3.Keypair.generate().publicKey;
+      await deleteTodo();
+    } catch (error) {
+      expect(error.code).to.equal(6002);
+      expect(error.msg).to.include("not found");
     }
   });
 });

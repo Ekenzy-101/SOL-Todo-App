@@ -6,4 +6,6 @@ pub enum TodoError {
   TodoContentTooLarge,
   #[msg("The length of the todolist should not be greater than 8")]
   TodoListTooLarge,
+  #[msg("The todo with the given id is not found")]
+  TodoNotFound,
 }
